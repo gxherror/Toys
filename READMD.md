@@ -1,2 +1,0 @@
-# Toys
-some small projects
