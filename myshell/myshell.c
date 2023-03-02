@@ -52,14 +52,15 @@ int main(int argc, char **argv)
     char *prompt = "==>";     // shell prompt
     char *readmepath;         // readme pathname
     shellstatus status;       // status structure
-
+    status.shellpath = malloc(sizeof(char)*MAX_BUFFER);
+    readmepath = malloc(sizeof(char)*MAX_BUFFER);
     // parse command line for batch input
     switch (argc)
     {
     case 1:
     {
         // keyboard input
-        // TODO
+        break;
     }
 
     case 2:
@@ -75,13 +76,32 @@ int main(int argc, char **argv)
     }
 
     // get starting cwd to add to readme pathname
-    // TODO
+    getcwdstr(status.shellpath,MAX_BUFFER);
+    strcat(status.shellpath,stripath(argv[0]));
+
 
     // get starting cwd to add to shell pathname
-    // TODO
+    getcwdstr(readmepath,MAX_BUFFER);
+    strcat(readmepath,README);
 
     // set SHELL= environment variable, malloc and store in environment
-    // TODO
+    char **ptr = environ;
+    while (*ptr != NULL)
+    {
+        char *key= malloc(MAX_BUFFER);
+        char *value = malloc(MAX_BUFFER); 
+        //get the original environment variable value and add myshell absolute pathname to it
+        strcpy(key, strtok(*ptr, "="));
+        strcpy(value,strtok(NULL,"="));
+        if (!strcmp(key,"SHELL")){
+            strcat(*ptr,"=");
+            strcat(*ptr,value);
+            strcat(*ptr,":");
+            strcat(*ptr,status.shellpath);
+            break;
+        }
+        *ptr++;
+    }
 
     // prevent ctrl-C and zombie children
     signal(SIGINT, SIG_IGN);  // prevent ^C interrupt
@@ -94,7 +114,7 @@ int main(int argc, char **argv)
         status.foreground = TRUE;
 
         // set up prompt
-        // TODO
+        printf("%s",prompt);
 
         // get command line from input
         if (fgets(linebuf, MAX_BUFFER, instream))
@@ -121,12 +141,17 @@ int main(int argc, char **argv)
                 // "clr" command
                 else if (!strcmp(args[0], "clr"))
                 {
-                    // TODO
+                    system("clear");
                 }
                 // "dir" command
                 else if (!strcmp(args[0], "dir"))
                 {
-                    // TODO
+                    char cmd[255];
+                    strcpy(cmd,"ls -al ");
+                    if (args[1] != NULL ){
+                        strcat(cmd,args[1]);
+                    }
+                    system(cmd);
                 }
                 // "echo" command
                 else if (!strcmp(args[0], "echo"))
@@ -136,7 +161,12 @@ int main(int argc, char **argv)
                 // "environ" command
                 else if (!strcmp(args[0], "environ"))
                 {
-                    // TODO
+                    char **ptr = environ;
+                    while (*ptr != NULL)
+                    {
+                        printf("%s\n",*ptr);
+                        ptr++;
+                    }
                 }
                 // "help" command
                 else if (!strcmp(args[0], "help"))
@@ -155,9 +185,11 @@ int main(int argc, char **argv)
                 else if (!strcmp(args[0], "quit"))
                 {
                     break;
+                }else
+                {
+                    // else pass command on to OS shell
+                    system(args[0]);
                 }
-                // else pass command on to OS shell
-                // TODO
             }
         }
     }
@@ -252,7 +284,8 @@ return start of buffer containing current working directory pathname
 
 char *getcwdstr(char *buffer, int size)
 {
-    // TODO
+    getcwd(buffer,size);
+    strcat(buffer,"/");
     return buffer;
 }
 
