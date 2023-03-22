@@ -19,9 +19,9 @@
 #define SEPARATORS " \t\n" // token sparators
 #define README "readme"    // help file name
 
-#define REPLACE 0          // !!customized!! change environ mode 
-#define APPEND 1           // !!customized!! change environ mode 
-#define ADD 2
+#define REPLACE 0 // !!customized!! change environ mode
+#define APPEND 1  // !!customized!! change environ mode
+#define ADD 2     // !!customized!! change environ mode
 struct shellstatus_st
 {
     int foreground;  // foreground execution flag
@@ -41,7 +41,7 @@ char *getcwdstr(char *, int);                   // get current work directory st
 FILE *redirected_op(shellstatus);               // return required o/p stream
 char *stripath(char *);                         // strip path from filename
 void syserrmsg(char *, char *);                 // system error message printout
-void changeenv(char *, char *, int);            // !!customized!! change environ 
+void changeenv(char *, char *, int);            // !!customized!! change environ
 
 /*******************************************************************/
 
@@ -56,8 +56,8 @@ int main(int argc, char **argv)
     char *prompt = "==>";     // shell prompt
     char *readmepath;         // readme pathname
     shellstatus status;       // status structure
-    status.shellpath = malloc(sizeof(char)*MAX_BUFFER);
-    readmepath = malloc(sizeof(char)*MAX_BUFFER);
+    status.shellpath = malloc(sizeof(char) * MAX_BUFFER);
+    readmepath = malloc(sizeof(char) * MAX_BUFFER);
     // parse command line for batch input
     switch (argc)
     {
@@ -70,11 +70,13 @@ int main(int argc, char **argv)
     case 2:
     {
         // possible batch/script
-        if (access(argv[1],R_OK) == 0){
-            instream = fopen(argv[1],"r");    
-        } else
+        if (access(argv[1], R_OK) == 0)
         {
-            syserrmsg(NULL,NULL);
+            instream = fopen(argv[1], "r");
+        }
+        else
+        {
+            syserrmsg(NULL, NULL);
         }
         break;
     }
@@ -86,16 +88,15 @@ int main(int argc, char **argv)
     }
 
     // get starting cwd to add to readme pathname
-    getcwdstr(status.shellpath,MAX_BUFFER);
-    strcat(status.shellpath,stripath(argv[0]));
-
+    getcwdstr(status.shellpath, MAX_BUFFER);
+    strcat(status.shellpath, stripath(argv[0]));
 
     // get starting cwd to add to shell pathname
-    getcwdstr(readmepath,MAX_BUFFER);
-    strcat(readmepath,README);
+    getcwdstr(readmepath, MAX_BUFFER);
+    strcat(readmepath, README);
 
     // set SHELL= environment variable, malloc and store in environment
-    changeenv("SHELL",status.shellpath,APPEND);
+    changeenv("SHELL", status.shellpath, APPEND);
 
     // prevent ctrl-C and zombie children
     signal(SIGINT, SIG_IGN);  // prevent ^C interrupt
@@ -108,7 +109,7 @@ int main(int argc, char **argv)
         status.foreground = TRUE;
 
         // set up prompt
-        printf("%s",prompt);
+        printf("%s", prompt);
 
         // get command line from input
         if (fgets(linebuf, MAX_BUFFER, instream))
@@ -117,30 +118,35 @@ int main(int argc, char **argv)
             // tokenize the input into args array
             arg = args;
             *arg++ = strtok(linebuf, SEPARATORS); // tokenize input
-            while ((*arg++ = strtok(NULL, SEPARATORS)));
+            while ((*arg++ = strtok(NULL, SEPARATORS)))
+                ;
 
             // last entry will be NULL
             if (args[0])
             {
                 // check for i/o redirection
                 check4redirection(args, &status);
+                ostream = redirected_op(status);
 
                 // check for internal/external commands
                 // "cd" command
                 if (!strcmp(args[0], "cd"))
                 {
-                    if (args[1] == NULL){
-                        getcwdstr(cwdbuf,MAX_BUFFER);
-                        fprintf(redirected_op(status),"%s\n",cwdbuf);
-                    }else if (chdir(args[1]) != 0)
+                    if (args[1] == NULL)
                     {
-                        syserrmsg(NULL,NULL);  
-                    }else
+                        getcwdstr(cwdbuf, MAX_BUFFER);
+                        fprintf(ostream, "%s\n", cwdbuf);
+                    }
+                    else if (chdir(args[1]) != 0)
                     {
-                        changeenv("PWD",args[1],REPLACE);
+                        syserrmsg(NULL, NULL);
+                    }
+                    else
+                    {
+                        getcwdstr(cwdbuf, MAX_BUFFER);
+                        changeenv("PWD", cwdbuf, REPLACE);
                     }
                     continue;
-                    
                 }
                 // "clr" command
                 else if (!strcmp(args[0], "clr"))
@@ -154,31 +160,11 @@ int main(int argc, char **argv)
                     args[0] = "ls";
                     args[2] = args[1];
                     args[1] = "-al";
-                    /*
-                    char cmd[255];
-                    strcpy(cmd,"ls -al ");
-                    if (args[1] != NULL ){
-                        strcat(cmd,args[1]);
-                    }
-                    system(cmd);
-                    */
+                    args[3] = NULL;
                 }
                 // "echo" command
                 else if (!strcmp(args[0], "echo"))
                 {
-                    /*
-                    char cmd[255];
-                    strcpy(cmd,"echo ");
-                    char **ptr = &args[1];
-                    while (*ptr != NULL)
-                    {
-                        strcat(cmd,*ptr);
-                        strcat(cmd," ");
-                        ptr++;
-                    }
-                    
-                    system(cmd);
-                    */
                 }
                 // "environ" command
                 else if (!strcmp(args[0], "environ"))
@@ -186,7 +172,7 @@ int main(int argc, char **argv)
                     char **ptr = environ;
                     while (*ptr != NULL)
                     {
-                        fprintf(redirected_op(status),"%s\n",*ptr);
+                        fprintf(ostream, "%s\n", *ptr);
                         ptr++;
                     }
                     continue;
@@ -202,7 +188,8 @@ int main(int argc, char **argv)
                 //  keyboard echo and returning when enter/return is pressed
                 else if (!strcmp(args[0], "pause"))
                 {
-                    args[0] = getpass("");
+                    getpass("");
+                    continue;
                 }
                 // "quit" command
                 else if (!strcmp(args[0], "quit"))
@@ -210,7 +197,7 @@ int main(int argc, char **argv)
                     break;
                 }
                 // else pass command on to OS shell
-                execute(args,status);
+                execute(args, status);
             }
         }
     }
@@ -237,38 +224,51 @@ void check4redirection(char **args, shellstatus *sstatus)
         // input redirection
         if (!strcmp(*args, "<"))
         {
-            *args = "";         
-            if(*(++args)) {      
-                if(access(*args, R_OK) == 0) {
+            *args = NULL;
+            if (*(++args))
+            {
+                if (access(*args, R_OK) == 0)
+                {
                     sstatus->infile = *args;
-                }else{
-                    syserrmsg(NULL,NULL);
                 }
-            } else {
-                syserrmsg(NULL,NULL);
-            }   
+                else
+                {
+                    syserrmsg(NULL, NULL);
+                }
+            }
+            else
+            {
+                syserrmsg(NULL, NULL);
+            }
         }
         // output direction
         else if (!strcmp(*args, ">") || !strcmp(*args, ">>"))
         {
-            if (!strcmp(*args, ">")) { 
-                sstatus->outmode = "w+";
-            } else {		    
-                sstatus->outmode = "a+";
+            if (!strcmp(*args, ">"))
+            {
+                sstatus->outmode = "w";
             }
-            *args = "";           
-            if(*(++args)) {         
-                //TODO
-                if(access(*args, W_OK) == 0) {
-                    sstatus->outfile = *args;
-                } else {
+            else
+            {
+                sstatus->outmode = "a";
+            }
+            *args = NULL;
+            if (*(++args))
+            {
+                if (access(*args, W_OK) != 0)
+                {
+                    fopen(*args, "w+");
                 }
-            } else {
-                syserrmsg(NULL,NULL);
+                sstatus->outfile = *args;
+            }
+            else
+            {
+                syserrmsg(NULL, NULL);
             }
         }
         else if (!strcmp(*args, "&"))
         {
+            *args = NULL;
             sstatus->foreground = FALSE;
         }
         args++;
@@ -289,7 +289,7 @@ void execute(char **args, shellstatus sstatus)
 {
     int status;
     pid_t child_pid;
-    char tempbuf[MAX_BUFFER];
+    // char tempbuf[MAX_BUFFER];
 
     switch (child_pid = fork())
     {
@@ -303,25 +303,33 @@ void execute(char **args, shellstatus sstatus)
         signal(SIGCHLD, SIG_DFL);
 
         // i/o redirection */
-        if (sstatus.infile) {
-            freopen(sstatus.infile, "r", stdin);
+        if (sstatus.infile)
+        {
+            if (freopen(sstatus.infile, "r", stdin) == NULL)
+            {
+                syserrmsg(NULL, NULL);
+            }
         }
-        if (sstatus.outfile) {
-            freopen(sstatus.outfile, sstatus.outmode, stdout);
+        if (sstatus.outfile)
+        {
+            if (freopen(sstatus.outfile, sstatus.outmode, stdout) == NULL)
+            {
+                syserrmsg(NULL, NULL);
+            }
         }
 
-        // set PARENT = environment variable, malloc and put in nenvironment        
-        changeenv("PARENT",sstatus.shellpath,ADD);
+        // set PARENT = environment variable, malloc and put in nenvironment
+        changeenv("PARENT", sstatus.shellpath, ADD);
         // final exec of program
         execvp(args[0], args);
         syserrmsg("exec failed -", args[0]);
         exit(127);
-
     }
 
     // continued execution in parent process
-    if (sstatus.foreground){
-        waitpid(child_pid,&status,0);
+    if (sstatus.foreground)
+    {
+        waitpid(child_pid, &status, 0);
     }
 }
 
@@ -335,8 +343,8 @@ return start of buffer containing current working directory pathname
 
 char *getcwdstr(char *buffer, int size)
 {
-    getcwd(buffer,size);
-    strcat(buffer,"/");
+    getcwd(buffer, size);
+    strcat(buffer, "/");
     return buffer;
 }
 
@@ -350,9 +358,10 @@ FILE * redirected_op(shellstatus ststus)
 
 FILE *redirected_op(shellstatus status)
 {
-    FILE * ostream = stdout;
-    if (status.outfile != NULL){
-        ostream = fopen(status.outfile,status.outmode);
+    FILE *ostream = stdout;
+    if (status.outfile != NULL)
+    {
+        ostream = fopen(status.outfile, status.outmode);
     }
     return ostream;
 }
@@ -434,47 +443,22 @@ void syserrmsg(char *msg1, char *msg2)
  change environ key's value
 
  if mode is REPLACE, change environ key's old value to nvalue,
- if mode is APPEND, append nvalue to environ key's old value 
+ if mode is APPEND, append nvalue to environ key's old value
 
 ********************************************************************/
-void changeenv(char *key, char *value, int mode){
-    if (mode == APPEND){
-        char * ovalue = getenv(key);
-        char * nvalue = malloc(MAX_BUFFER);
-        strcat(nvalue,value);
-        strcat(nvalue,":");
-        strcat(nvalue,ovalue);
-        setenv(key,nvalue,1);
-    } else if (mode == REPLACE||mode == ADD)
+void changeenv(char *key, char *value, int mode)
+{
+    if (mode == APPEND)
     {
-        setenv(key,value,1);
-    } 
-    /*
-    char **ptr = environ;
-    while (*ptr != NULL)
-    {
-        //get the original environment variable key and value 
-        char * okey = malloc(MAX_BUFFER);
-        char * ovalue = malloc(MAX_BUFFER);
-       
-        char * delim = strchr(*ptr, '=');
-        strcpy(ovalue, delim + 1);
-        strncpy(okey,*ptr,delim - *ptr);
-        if (!strcmp(okey,key)){
-            strcpy(newenv,okey);
-            strcat(newenv,"=");
-            if (mode == REPLACE){
-                strcat(newenv,nvalue);
-            } else if (mode == APPEND)
-            {
-                strcat(newenv,ovalue);
-                strcat(newenv,":");
-                strcat(newenv,nvalue);
-            }
-            *ptr = newenv;
-            break;
-        }
-        ptr++;
+        char *ovalue = getenv(key);
+        char *nvalue = malloc(MAX_BUFFER);
+        strcat(nvalue, value);
+        strcat(nvalue, ":");
+        strcat(nvalue, ovalue);
+        setenv(key, nvalue, 1);
     }
-    */
+    else if (mode == REPLACE || mode == ADD)
+    {
+        setenv(key, value, 1);
+    }
 }

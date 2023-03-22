@@ -21,7 +21,7 @@
 
 #define REPLACE 0          // !!customized!! change environ mode 
 #define APPEND 1           // !!customized!! change environ mode 
-#define ADD 2
+#define ADD 2              // !!customized!! change environ mode
 struct shellstatus_st
 {
     int foreground;  // foreground execution flag
@@ -124,6 +124,7 @@ int main(int argc, char **argv)
             {
                 // check for i/o redirection
                 check4redirection(args, &status);
+                ostream = redirected_op(status);
 
                 // check for internal/external commands
                 // "cd" command
@@ -131,13 +132,14 @@ int main(int argc, char **argv)
                 {
                     if (args[1] == NULL){
                         getcwdstr(cwdbuf,MAX_BUFFER);
-                        fprintf(redirected_op(status),"%s\n",cwdbuf);
+                        fprintf(ostream,"%s\n",cwdbuf);
                     }else if (chdir(args[1]) != 0)
                     {
                         syserrmsg(NULL,NULL);  
                     }else
                     {
-                        changeenv("PWD",args[1],REPLACE);
+                        getcwdstr(cwdbuf,MAX_BUFFER);
+                        changeenv("PWD",cwdbuf,REPLACE);
                     }
                     continue;
                     
@@ -154,31 +156,12 @@ int main(int argc, char **argv)
                     args[0] = "ls";
                     args[2] = args[1];
                     args[1] = "-al";
-                    /*
-                    char cmd[255];
-                    strcpy(cmd,"ls -al ");
-                    if (args[1] != NULL ){
-                        strcat(cmd,args[1]);
-                    }
-                    system(cmd);
-                    */
+                    args[3] = NULL;
                 }
                 // "echo" command
                 else if (!strcmp(args[0], "echo"))
                 {
-                    /*
-                    char cmd[255];
-                    strcpy(cmd,"echo ");
-                    char **ptr = &args[1];
-                    while (*ptr != NULL)
-                    {
-                        strcat(cmd,*ptr);
-                        strcat(cmd," ");
-                        ptr++;
-                    }
-                    
-                    system(cmd);
-                    */
+
                 }
                 // "environ" command
                 else if (!strcmp(args[0], "environ"))
@@ -186,7 +169,7 @@ int main(int argc, char **argv)
                     char **ptr = environ;
                     while (*ptr != NULL)
                     {
-                        fprintf(redirected_op(status),"%s\n",*ptr);
+                        fprintf(ostream,"%s\n",*ptr);
                         ptr++;
                     }
                     continue;
@@ -202,7 +185,8 @@ int main(int argc, char **argv)
                 //  keyboard echo and returning when enter/return is pressed
                 else if (!strcmp(args[0], "pause"))
                 {
-                    args[0] = getpass("");
+                    getpass("");
+                    continue;
                 }
                 // "quit" command
                 else if (!strcmp(args[0], "quit"))
@@ -237,7 +221,7 @@ void check4redirection(char **args, shellstatus *sstatus)
         // input redirection
         if (!strcmp(*args, "<"))
         {
-            *args = "";         
+            *args =  NULL;         
             if(*(++args)) {      
                 if(access(*args, R_OK) == 0) {
                     sstatus->infile = *args;
@@ -252,23 +236,23 @@ void check4redirection(char **args, shellstatus *sstatus)
         else if (!strcmp(*args, ">") || !strcmp(*args, ">>"))
         {
             if (!strcmp(*args, ">")) { 
-                sstatus->outmode = "w+";
+                sstatus->outmode = "w";
             } else {		    
-                sstatus->outmode = "a+";
+                sstatus->outmode = "a";
             }
-            *args = "";           
+            *args = NULL;           
             if(*(++args)) {         
-                //TODO
-                if(access(*args, W_OK) == 0) {
-                    sstatus->outfile = *args;
-                } else {
+                if(access(*args, W_OK) != 0) {
+                    fopen(*args,"w+");
                 }
+                sstatus->outfile = *args;
             } else {
                 syserrmsg(NULL,NULL);
             }
         }
         else if (!strcmp(*args, "&"))
         {
+            *args = NULL;
             sstatus->foreground = FALSE;
         }
         args++;
@@ -289,7 +273,7 @@ void execute(char **args, shellstatus sstatus)
 {
     int status;
     pid_t child_pid;
-    char tempbuf[MAX_BUFFER];
+    //char tempbuf[MAX_BUFFER];
 
     switch (child_pid = fork())
     {
@@ -448,33 +432,5 @@ void changeenv(char *key, char *value, int mode){
     } else if (mode == REPLACE||mode == ADD)
     {
         setenv(key,value,1);
-    } 
-    /*
-    char **ptr = environ;
-    while (*ptr != NULL)
-    {
-        //get the original environment variable key and value 
-        char * okey = malloc(MAX_BUFFER);
-        char * ovalue = malloc(MAX_BUFFER);
-       
-        char * delim = strchr(*ptr, '=');
-        strcpy(ovalue, delim + 1);
-        strncpy(okey,*ptr,delim - *ptr);
-        if (!strcmp(okey,key)){
-            strcpy(newenv,okey);
-            strcat(newenv,"=");
-            if (mode == REPLACE){
-                strcat(newenv,nvalue);
-            } else if (mode == APPEND)
-            {
-                strcat(newenv,ovalue);
-                strcat(newenv,":");
-                strcat(newenv,nvalue);
-            }
-            *ptr = newenv;
-            break;
-        }
-        ptr++;
     }
-    */
 }
