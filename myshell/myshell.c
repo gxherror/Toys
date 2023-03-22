@@ -108,8 +108,10 @@ int main(int argc, char **argv)
         // (re)initialise status structure
         status.foreground = TRUE;
 
+
         // set up prompt
-        printf("%s", prompt);
+        fprintf(ostream,"%s", prompt);
+        fflush(ostream);
 
         // get command line from input
         if (fgets(linebuf, MAX_BUFFER, instream))
